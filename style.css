@@ -1,3 +1,200 @@
-body {
-	background-color: #000099 !important;
+td {
+  padding: 5px;
+}
+
+.graph_container {
+  padding: 0 20px;
+}
+
+.graph_footer {
+  margin-top: 10px;
+}
+
+.graph {
+  margin: 20px auto;
+}
+
+.graph_control {
+  height: 36px;
+}
+
+.gainUp, .gainDown, .gainReset {
+  float: left;
+}
+
+.selected {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.panel-heading a:after {
+    font-family:'Glyphicons Halflings';
+    content:"\e114";
+    color: grey;
+}
+
+.panel-heading a.collapsed:after {
+    content:"\e080";
+}
+
+.feature_panel {
+  float: left;
+  display: inline;
+}
+
+.artifact_panel {
+  display: inline;
+}
+
+.navigation_panel, .examples_panel {
+  float: right;
+  display: inline;
+}
+
+.main_container {
+  padding: 10px;
+  padding-top: 0;
+  text-align: center;
+}
+
+.experiment_container {
+  padding-top: 0;
+}
+
+.keyboardShortcuts {
+  margin-left: 30px;
+}
+
+.complete-condition {
+  margin-right: -15px;
+}
+
+.classification.active {
+  background-color: lightgrey;
+}
+
+.highcharts-annotation {
+  cursor: pointer;
+}
+
+.highcharts-annotation.saved {
+  cursor: auto;
+}
+
+.confidence-buttons {
+  width: 60px;
+  height: auto;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.highcharts-annotation.saved .toolbar {
+  display: none;
+}
+
+.highcharts-annotation.saved:hover .toolbar {
+  display: block;
+}
+
+.confidence-buttons input {
+  display: none;
+}
+
+.confidence-buttons .btn {
+  width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  display: inline-block !important;
+}
+
+.confidence-buttons .btn.active {
+  border: 3px solid #000000;
+}
+
+.highcharts-annotation .comment {
+  width: 240px;
+  height: auto;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.highcharts-annotation .comment button {
+  position: static;
+  height: 20px;
+  width: 60px;
+  font-size: 12px;
+  line-height: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+.highcharts-annotation .comment input {
+  height: 21px !important;
+  width: 180px !important;
+  vertical-align: middle !important;
+  font-size: 13px !important;
+  background-color: #ffffff !important;
+  margin: 0 !important;
+}
+
+.annotationTime {
+  position: relative;
+}
+
+.annotation-time-container {
+  display: none;
+  position: absolute;
+  top: 33px;
+  right: 0;
+  z-index: 9999999999;
+  background-color: #ffffff;
+  padding: 10px 0 5px 10px;
+}
+
+.annotationTime:hover .annotation-time-container, .annotationTime:focus .annotation-time-container {
+  display: block;
+} 
+
+.annotation-time-container .time {
+  margin-left: 20px;
+  display: inline-block;
+  width: auto;
+}
+
+.examples {
+  margin-top: 60px;
+  margin-bottom: 60px;
+}
+
+.examples-title {
+  height: 34px;
+  display: inline-block;
+  line-height: 34px;
+  margin-right: 15px;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.progress {
+  width: 30%;
+  margin: 0px 2px;
+  display: inline-block;
+  height: 34px;
+}
+
+.correct-answer-explanation {
+  display: inline-block;
+}
+
+.correct-answer-explanation .label {
+  display: inline-block;
+  height: 34px;
+  font-size: 18px;
+  line-height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.highcharts-container {
+  outline: 1px solid rgba(134, 142, 149, 0.4);
 }
