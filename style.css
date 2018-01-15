@@ -198,3 +198,8 @@ td {
 .highcharts-container {
   outline: 1px solid rgba(134, 142, 149, 0.4);
 }
+
+.shortcut-key {
+  font-weight: bold;
+  text-decoration: underline;
+}

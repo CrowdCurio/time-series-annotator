@@ -1063,11 +1063,12 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                             <button type="button" class="btn btn-default artifact" data-annotation-type="artifacts_strong">Strong Artifacts</button> \
                         </div> \
                         <div class="sleep_stage_panel btn-group" role="group"> \
-                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_wake">Wake</button> \
-                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_n1">N1</button> \
-                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_n2">N2</button> \
-                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_n3">N3</button> \
-                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_rem">REM</button> \
+                            <button type="button" class="btn btn-default grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_wake"><span class="shortcut-key">W</span>AKE</button> \
+                            <button type="button" class="btn btn-default grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_n1">N<span class="shortcut-key">1</span></button> \
+                            <button type="button" class="btn btn-default grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_n2">N<span class="shortcut-key">2</span></button> \
+                            <button type="button" class="btn btn-default grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_n3">N<span class="shortcut-key">3</span></button> \
+                            <button type="button" class="btn btn-default grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_rem"><span class="shortcut-key">R</span>EM</button> \
+                            <button type="button" class="btn btn-default grey lighten-1 sleep_stage" data-annotation-type="sleep_stage_unknown"><span class="shortcut-key">U</span>NKNOWN</button> \
                         </div> \
                         <div class="navigation_panel"> \
                                 <button type="button" class="btn btn-default backToLastActiveWindow" aria-label="Back to Last Active Window"> \
@@ -1776,7 +1777,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
 
     _setupSleepStagePanel: function() {
         var activeClass = 'teal';
-        var inactiveClass = 'grey';
+        var inactiveClass = 'grey lighten-1';
         var that = this;
         $(that.element).find('.sleep_stage_panel button.sleep_stage').click(function() {
             var button = $(this);
@@ -1839,22 +1840,45 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                 if(keyCode == 66 && that.options.showBackToLastActiveWindowButton) {
                     // back to last active window
                     that._switchBackToLastActiveWindow();
+                    return;
                 } else if((keyCode == 37 || keyCode == 65 || keyCode == 34) && that.options.showBackwardButton) { // left arrow, a, page down
                     // backward
                     e.preventDefault();
                     that._shiftChart(-1);
+                    return;
                 } else if ((keyCode == 39 || keyCode == 68 || keyCode == 33) && that.options.showForwardButton) { // right arrow, d, page up
                     // forward
                     e.preventDefault();
                     that._shiftChart(1);
+                    return;
                 } else if (keyCode == 38 && that.options.showFastForwardButton) { // up arrow
                     // fast foward
                     e.preventDefault();
                     that._shiftChart(that.options.windowJumpSizeFastForwardBackward);
+                    return;
                 } else if (keyCode == 40 && that.options.showFastBackwardButton) { // down arrow
                     // fast backward
                     e.preventDefault();
                     that._shiftChart(-that.options.windowJumpSizeFastForwardBackward);
+                    return;
+                } else if (that.options.showSleepStageButtons) {
+                    var sleepStageShortCutPressed = false;
+                    $(that.element).find('.sleep_stage_panel .shortcut-key').each(function() {
+                        var character = $(this).text();
+                        var characterKeyCodeLowerCase = character.toLowerCase().charCodeAt(0);
+                        var characterKeyCodeAlternative = character.toUpperCase().charCodeAt(0);
+                        if (characterKeyCodeLowerCase >= 49 && characterKeyCodeLowerCase <= 57) {
+                            characterKeyCodeAlternative = characterKeyCodeLowerCase + 48;
+                        }
+                        if (keyCode == characterKeyCodeLowerCase || keyCode == characterKeyCodeAlternative) {
+                            sleepStageShortCutPressed = true;
+                            var button = $(this).parents('.sleep_stage').first();
+                            button.click();
+                        }
+                    });
+                    if (sleepStageShortCutPressed) {
+                        return;
+                    }
                 // make it possible to choose feature classificaiton using number keys
                 } else if (keyCode >= 49 && keyCode <= 57) {
                     e.preventDefault();
@@ -1862,6 +1886,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                     if (featureClassButton) {
                         that._selectFeatureClass(featureClassButton);
                     }
+                    return;
                 // separate case for the numpad keys, because javascript is a stupid language
                 } else if (keyCode >= 97 && keyCode <= 105) {
                     e.preventDefault();
@@ -1869,6 +1894,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                     if (featureClassButton) {
                         that._selectFeatureClass(featureClassButton);
                     }
+                    return;
                 }
             });
         }
@@ -3294,13 +3320,14 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
     _displaySleepStageSelection: function(annotations) {
         var that = this;
         var activeClass = 'teal';
-        var inactiveClass = 'grey';
+        var inactiveClass = 'grey lighten-1';
         var validKeys = [
             'sleep_stage_wake',
             'sleep_stage_n1',
             'sleep_stage_n2',
             'sleep_stage_n3',
             'sleep_stage_rem',
+            'sleep_stage_unknown',
         ];
         var noSleepStageAnnotation = true;
         $(that.element).find('.sleep_stage_panel button.sleep_stage').removeClass(activeClass).addClass(inactiveClass);
