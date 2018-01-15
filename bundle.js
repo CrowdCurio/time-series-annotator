@@ -550,6 +550,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
         idleTimeThresholdSeconds: 300,
         experiment: {},
         showArtifactButtons: false,
+        showSleepStageButtons: false,
         showNavigationButtons: true,
         showBackToLastActiveWindowButton: true,
         showFastBackwardButton: true,
@@ -1061,6 +1062,13 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                             <button type="button" class="btn btn-default artifact" data-annotation-type="artifacts_medium">Medium Artifacts</button> \
                             <button type="button" class="btn btn-default artifact" data-annotation-type="artifacts_strong">Strong Artifacts</button> \
                         </div> \
+                        <div class="sleep_stage_panel btn-group" role="group"> \
+                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_wake">Wake</button> \
+                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_n1">N1</button> \
+                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_n2">N2</button> \
+                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_n3">N3</button> \
+                            <button type="button" class="btn btn-default grey sleep_stage" data-annotation-type="sleep_stage_rem">REM</button> \
+                        </div> \
                         <div class="navigation_panel"> \
                                 <button type="button" class="btn btn-default backToLastActiveWindow" aria-label="Back to Last Active Window"> \
                                     <span class="fa fa-repeat" aria-hidden="true"></span> \
@@ -1127,6 +1135,9 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
         }
         if (!that.options.showArtifactButtons) {
             $(that.element).find('.artifact_panel').hide();
+        }
+        if (!that.options.showSleepStageButtons) {
+            $(that.element).find('.sleep_stage_panel').hide();
         }
         if (!that.options.showNavigationButtons) {
             $(that.element).find('.navigation_panel').hide();
@@ -1584,6 +1595,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
         that._setupFeaturePanel();
         that._setupNavigationPanel();
         that._setupArtifactPanel();
+        that._setupSleepStagePanel();
         that._setupTrainingPhase();
         that._getUserStatus();
     },
@@ -1759,6 +1771,23 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                 .addClass(activeClass)
                 .siblings()
                 .removeClass(activeClass);
+        });
+    },
+
+    _setupSleepStagePanel: function() {
+        var activeClass = 'teal';
+        var inactiveClass = 'grey';
+        var that = this;
+        $(that.element).find('.sleep_stage_panel button.sleep_stage').click(function() {
+            var button = $(this);
+            var type = button.data('annotation-type');
+            that._saveSleepStageAnnotation(type);
+            button
+                .addClass(activeClass)
+                .removeClass(inactiveClass)
+                .siblings()
+                .removeClass(activeClass)
+                .addClass(inactiveClass);
         });
     },
 
@@ -2745,6 +2774,11 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
         that._saveFullWindowLabel('ARTIFACT', type);
     },
 
+    _saveSleepStageAnnotation: function(type) {
+        var that = this;
+        that._saveFullWindowLabel('SLEEP_STAGE', type);
+    },
+
     _getAnnotationXMinFixed: function(annotation) {
         return parseFloat(annotation.options.xValue).toFixed(2);
     },
@@ -3165,35 +3199,38 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                 that._incrementNumberOfAnnotationsInCurrentWindow(that._getVisibleAnnotations(data.annotations).length);
             }
             that._displayArtifactsSelection(data.annotations);
+            that._displaySleepStageSelection(data.annotations);
             return;
         }
         that.vars.annotationsCache[cacheKey] = {
             annotations: [],
         };
         that.vars.annotationsLoaded = true;
-        // that._getApiClient().annotation().getForContext(function(annotations, error) {
-        //     if (error) {
-        //         that.vars.annotationsLoaded = false;
-        //         console.log(error.message);
-        //         return;
-        //     }
-        //     annotations.forEach(function(annotation) {
-        //         var annotationWindowStart = Math.floor(annotation.position.start / that.options.windowSizeInSeconds) * that.options.windowSizeInSeconds;
-        //         var annotationWindowEnd = annotationWindowStart + that.options.windowSizeInSeconds;
-        //         var annotationCacheKey = that._getAnnotationsCacheKey(recording_name, annotationWindowStart, annotationWindowEnd, correctAnswers);
-        //         if (!that.vars.annotationsCache[annotationCacheKey]) {
-        //             that.vars.annotationsCache[annotationCacheKey] = {
-        //                 annotations: [],
-        //             };
-        //         }
-        //         that.vars.annotationsCache[annotationCacheKey].annotations.push(annotation);
-        //     });
-        //     var data = that.vars.annotationsCache[cacheKey] || {
-        //         annotations: [],
-        //     };
-        //     that._displayArtifactsSelection(annotations);
-        //     that._displayAnnotations(annotations);
-        // });
+        that._getApiClient().list('response', {}, function(response) {
+            if (!response.results) {
+                return;
+            }
+            var annotations = response.results.map(function(annotation) {
+                return annotation.content;
+            });
+            annotations.forEach(function(annotation) {
+                var annotationWindowStart = Math.floor(annotation.position.start / that.options.windowSizeInSeconds) * that.options.windowSizeInSeconds;
+                var annotationWindowEnd = annotationWindowStart + that.options.windowSizeInSeconds;
+                var annotationCacheKey = that._getAnnotationsCacheKey(recording_name, annotationWindowStart, annotationWindowEnd, correctAnswers);
+                if (!that.vars.annotationsCache[annotationCacheKey]) {
+                    that.vars.annotationsCache[annotationCacheKey] = {
+                        annotations: [],
+                    };
+                }
+                that.vars.annotationsCache[annotationCacheKey].annotations.push(annotation);
+            });
+            var data = that.vars.annotationsCache[cacheKey] || {
+                annotations: [],
+            };
+            that._displayArtifactsSelection(annotations);
+            that._displaySleepStageSelection(annotations);
+            that._displayAnnotations(annotations);
+        });
     },
 
     _getVisibleAnnotations: function(annotations) {
@@ -3245,12 +3282,37 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                 var cacheKey = that._getAnnotationsCacheKey(that.vars.currentWindowRecording, annotation.position.start, annotation.position.end, false, 'ARTIFACT');
                 that.vars.annotationsCache[cacheKey] = annotation.id;
                 $(that.element).find('.artifact_panel button.artifact[data-annotation-type="' + annotation.label + '"]').addClass(activeClass);
-                var noArtifactAnnotation = false;
+                noArtifactAnnotation = false;
                 break;
             }
         }
         if (noArtifactAnnotation) {
             $(that.element).find('.artifact_panel button.artifact[data-annotation-type="artifacts_none"]').addClass(activeClass);
+        }
+    },
+
+    _displaySleepStageSelection: function(annotations) {
+        var that = this;
+        var activeClass = 'teal';
+        var inactiveClass = 'grey';
+        var validKeys = [
+            'sleep_stage_wake',
+            'sleep_stage_n1',
+            'sleep_stage_n2',
+            'sleep_stage_n3',
+            'sleep_stage_rem',
+        ];
+        var noSleepStageAnnotation = true;
+        $(that.element).find('.sleep_stage_panel button.sleep_stage').removeClass(activeClass).addClass(inactiveClass);
+        for (var i = 0; i < annotations.length; ++i) {
+            var annotation = annotations[i];
+            if (validKeys.indexOf(annotation.label) > -1) {
+                var cacheKey = that._getAnnotationsCacheKey(that.vars.currentWindowRecording, annotation.position.start, annotation.position.end, false, 'SLEEP_STAGE');
+                that.vars.annotationsCache[cacheKey] = annotation.id;
+                $(that.element).find('.sleep_stage_panel button.sleep_stage[data-annotation-type="' + annotation.label + '"]').addClass(activeClass).removeClass(inactiveClass);
+                noSleepStageAnnotation = false;
+                break;
+            }
         }
     },
 
@@ -3339,26 +3401,32 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
             channels = [ channels ];
         }
         var apiClient = that._getApiClient();
-        var annotation = apiClient.annotation().init({
-            id: annotationId,
-            label: type,
-            confidence: confidence,
-            position: {
-                channels: channels,
-                start: parseFloat(start),
-                end: parseFloat(end),
-            },
-            metadata: {
-                channels_displayed: that.options.channelsDisplayed,
-                comment: comment,
-                metadata: metadata,
-            },
-        }).save(function(annotation, error) {
-            callback && callback(annotation, error);
-            if (error) {
-                alert(error.message);
-                return;
+        var params = {
+            content: {
+                label: type,
+                confidence: confidence,
+                position: {
+                    channels: channels,
+                    start: parseFloat(start),
+                    end: parseFloat(end),
+                },
+                metadata: {
+                    channels_displayed: that.options.channelsDisplayed,
+                    comment: comment,
+                    metadata: metadata,
+                },
             }
+        }
+        if (!annotationId) {
+            apiClient.create('response', params, updateCache);
+        }
+        else {
+            params.id = annotationId;
+            console.log(params);
+            apiClient.update('response', params, updateCache);
+        }
+        function updateCache(annotation) {
+            callback && callback(annotation, null);
             var window_start = that.vars.currentWindowStart;
             var window_end = window_start + that.options.windowSizeInSeconds;
             var key = that._getAnnotationsCacheKey(recording_name, window_start, window_end);
@@ -3368,9 +3436,9 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                     annotations: []
                 }
             }
-            cacheEntry.annotations.unshift(annotation);
+            cacheEntry.annotations.unshift(annotation.content);
             that.vars.annotationsCache[key] = cacheEntry;
-        });
+        }
     },
 
     _deleteAnnotation: function(annotationId, recording_name, start, end, channels, channelsDisplayed) {
@@ -6917,6 +6985,7 @@ CrowdCurioClient.prototype.getNextTask = function(queue_type, callback){
 // note: create is supported for two models (event/response)
 // update is supported for all models
 // list is supported for two models (response/data)
+// delete is supported for all models
 CrowdCurioClient.prototype.create = function(model, params, callback){
     var that = this;
     // extend params by adding relations
@@ -6953,18 +7022,41 @@ CrowdCurioClient.prototype.list = function(model, params, callback){
     var that = this;
     // extend params by adding relations
     if(model === 'response'){
-        params = jQuery.extend({
-            owner: that.user,
-            data: that.data,
-            task: that.task,
-        }, params);
+        if (that.user) {
+            params.owner = that.user.id;
+        }
+        if (that.data) {
+            params.data = that.data.id;
+        }
+        if (that.task) {
+            params.task = that.task.id;
+        }
+        if (that.experiment) {
+            params.experiment = that.experiment.id;
+        }
+        if (that.condition) {
+            params.condition = that.condition.id;
+        }
     } else if (model === 'data'){
-        params = jQuery.extend({
-            task: that.task !== null ? that.task.id : null,
-        }, params);
+        if (that.task) {
+            params.task = that.task.id;
+        }
+        if (that.experiment) {
+            params.experiment = that.experiment.id;
+        }
+        if (that.condition) {
+            params.condition = that.condition.id;
+        }
     }
 
     let action = [model, "list"];
+    this.client.action(schema, action, params).then(function(result) {
+        callback(result);
+    });
+}
+
+CrowdCurioClient.prototype.delete = function(model, params, callback){
+    let action = [model, "delete"];
     this.client.action(schema, action, params).then(function(result) {
         callback(result);
     });

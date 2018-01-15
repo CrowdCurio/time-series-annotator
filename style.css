@@ -42,7 +42,7 @@ td {
   display: inline;
 }
 
-.artifact_panel {
+.artifact_panel, .sleep_stage_panel {
   display: inline;
 }
 
