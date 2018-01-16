@@ -3266,9 +3266,9 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
             var data = that.vars.annotationsCache[cacheKey] || {
                 annotations: [],
             };
-            that._displayArtifactsSelection(annotations);
-            that._displaySleepStageSelection(annotations);
-            that._displayAnnotations(annotations);
+            that._displayArtifactsSelection(data.annotations);
+            that._displaySleepStageSelection(data.annotations);
+            that._displayAnnotations(data.annotations);
         });
     },
 
