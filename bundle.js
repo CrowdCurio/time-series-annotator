@@ -2465,6 +2465,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
     _setupAnnotationInteraction: function() {
         var that = this;
         if (that.options.isReadOnly) return;
+        if (!that.options.features.order || !that.options.features.order.length) return;
         var chart = that.vars.chart;
         var container = chart.container;
 
