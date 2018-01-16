@@ -458,6 +458,7 @@ apiClient.list('data', {}, function(response) {
         return;
     }
     var data = response.results[0];
+    apiClient.setData(data.id);
     var taskConfig = convertKeysFromUnderscoreToCamelCase(data.content.task_config);
     $.extend(true, config, taskConfig);
     containerElement.TimeSeriesAnnotator(config);
@@ -3232,12 +3233,18 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
             annotations: [],
         };
         that.vars.annotationsLoaded = true;
-        that._getApiClient().list('response', {}, function(response) {
-            if (!response.results) {
+        that._getApiClient().listAll('response', {}, function(annotations) {
+            if (!annotations) {
                 return;
             }
-            var annotations = response.results.map(function(annotation) {
-                return annotation.content;
+            // sort annotations by the date they were last updated, most recently updated first
+            annotations = annotations.sort(function(a, b) {
+                return (a.updated < b.updated) ? 1 : (a.updated > b.updated) ? -1 : 0;
+            });
+            var annotations = annotations.map(function(annotation) {
+                var annotationFormatted = annotation.content
+                annotationFormatted.id = annotation.id;
+                return annotationFormatted;
             });
             annotations.forEach(function(annotation) {
                 var annotationWindowStart = Math.floor(annotation.position.start / that.options.windowSizeInSeconds) * that.options.windowSizeInSeconds;
@@ -3449,8 +3456,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
         }
         else {
             params.id = annotationId;
-            console.log(params);
-            apiClient.update('response', params, updateCache);
+            apiClient.partialUpdate('response', params, updateCache);
         }
         function updateCache(annotation) {
             callback && callback(annotation, null);
@@ -7010,8 +7016,8 @@ CrowdCurioClient.prototype.getNextTask = function(queue_type, callback){
 
 // General-Purpose CRUD Operations for Models
 // note: create is supported for two models (event/response)
-// update is supported for all models
-// list is supported for two models (response/data)
+// update and partialUpdate are supported for all models
+// list and listAll are supported for two models (response/data)
 // delete is supported for all models
 CrowdCurioClient.prototype.create = function(model, params, callback){
     var that = this;
@@ -7040,6 +7046,13 @@ CrowdCurioClient.prototype.create = function(model, params, callback){
 
 CrowdCurioClient.prototype.update = function(model, params, callback){
     let action = [model, "update"];
+    this.client.action(schema, action, params).then(function(result) {
+        callback(result);
+    });
+}
+
+CrowdCurioClient.prototype.partialUpdate = function(model, params, callback){
+    let action = [model, "partial_update"];
     this.client.action(schema, action, params).then(function(result) {
         callback(result);
     });
@@ -7080,6 +7093,24 @@ CrowdCurioClient.prototype.list = function(model, params, callback){
     this.client.action(schema, action, params).then(function(result) {
         callback(result);
     });
+}
+
+CrowdCurioClient.prototype.listAll = function(model, params, callback){
+    let that = this;
+    let results = [];
+    params.page = 1;
+    listNextPage();
+    function listNextPage() {
+        that.list(model, params, function(response) {
+            Array.prototype.push.apply(results, response.results);
+            if (!response.links.next) {
+                callback(results);
+                return;
+            }
+            params.page += 1;
+            listNextPage();
+        });
+    };
 }
 
 CrowdCurioClient.prototype.delete = function(model, params, callback){
