@@ -1873,7 +1873,7 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                         var character = $(this).text();
                         var characterKeyCodeLowerCase = character.toLowerCase().charCodeAt(0);
                         var characterKeyCodeAlternative = character.toUpperCase().charCodeAt(0);
-                        if (characterKeyCodeLowerCase >= 49 && characterKeyCodeLowerCase <= 57) {
+                        if (characterKeyCodeLowerCase >= 48 && characterKeyCodeLowerCase <= 57) {
                             characterKeyCodeAlternative = characterKeyCodeLowerCase + 48;
                         }
                         if (keyCode == characterKeyCodeLowerCase || keyCode == characterKeyCodeAlternative) {
