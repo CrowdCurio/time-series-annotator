@@ -496,6 +496,43 @@ require('./jquery.timer');
 var Highcharts = require('highcharts');
 var HighchartsAnnotations = require('highcharts-annotations')(Highcharts);
 
+var frequencyBandVisualizationDefault = {
+    bands: [
+        {
+            name: 'Delta',
+            frequency: {
+                min: 1,
+                max: 4,
+            },
+            color: '#F77C00', // orange
+        },
+        {
+            name: 'Mixed Freq.',
+            frequency: {
+                min: 4,
+                max: 8,
+            },
+            color: '#25C700', // green
+        },
+        {
+            name: 'Alpha',
+            frequency: {
+                min: 8,
+                max: 13,
+            },
+            color: '#1968FF', // blue
+        },
+        {
+            name: 'Beta',
+            frequency: {
+                min: 13,
+                max: 30,
+            },
+            color: '#000000', // black
+        },
+    ],
+};
+
 $.widget('crowdcurio.TimeSeriesAnnotator', {
 
     options: {
@@ -564,6 +601,15 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
         showReferenceLines: true,
         showTimeLabels: true,
         showChannelNames: true,
+        frequencyBandVisualizationPerChannel: [
+            frequencyBandVisualizationDefault,
+            frequencyBandVisualizationDefault,
+            frequencyBandVisualizationDefault,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+        ],
         features: {
             examplesModeEnabled: false,
             examples: [{
@@ -2245,11 +2291,16 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                 gain: input.channel_gains[i],
                 values: input.channel_values[name]
             }
+            if (input.channel_stft_values_absolute && input.channel_stft_values_absolute[i]) {
+                channel.stftValuesAbsolute = input.channel_stft_values_absolute[i];
+            }
             channels.push(channel);
         }
         var output = {
             channels: channels,
-            sampling_rate: input.sampling_rate
+            sampling_rate: input.sampling_rate,
+            stft_sample_frequencies: input.stft_sample_frequencies,
+            stft_segment_times: input.stft_segment_times,
         }
         return output;
     },
@@ -2298,13 +2349,19 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
             for(var ii=0; ii<data.channels.length; ii++) {
                 var channel = data.channels[ii];
 
-                that.vars.chart.series[ii].update({
+                var channelUpdate = {
                     pointStart: that.vars.currentWindowStart,
                     pointInterval: 1 / data.sampling_rate,
                     name: channel.name,
                     type: 'line',
                     data: channel.values
-                }, false); // false to supress redrawing after every series is added
+                };
+                var channelColor = that._getChannelColor(data, ii);
+                if (channelColor) {
+                    channelUpdate.color = channelColor;
+                }
+
+                that.vars.chart.series[ii].update(channelUpdate, false); // false to supress redrawing after every series is added
             }
             that.vars.chart.xAxis[0].setExtremes(that.vars.currentWindowStart, that.vars.currentWindowStart + that.options.windowSizeInSeconds, false, false);
             that.vars.chart.redraw(); // efficiently redraw the entire window in one go
@@ -2355,9 +2412,6 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
             },
             title: {
                 text: ''
-            },
-            tooltip: {
-                enabled: false
             },
             plotOptions: {
                 series: {
@@ -3060,9 +3114,85 @@ $.widget('crowdcurio.TimeSeriesAnnotator', {
                 type: 'line',
                 data: channels[ii].values
             };
+            var channelColor = that._getChannelColor(data, ii);
+            if (channelColor) {
+                channel.color = channelColor;
+                channel.enableMouseTracking = true;
+                channel.stickyTracking = false;
+                channel.tooltip = that._getChannelTooltip(data, ii);
+            }
             series.push(channel);
         }
         return(series);
+    },
+
+    _getChannelColor: function(data, channelIndex) {
+        var that = this;
+        var frequencyBandVisualization = that.options.frequencyBandVisualizationPerChannel[channelIndex];
+        if (!frequencyBandVisualization) {
+            return;
+        }
+        var bands = frequencyBandVisualization.bands;
+        var bandsFrequencyIndices = [];
+        bands.forEach(function(band) {
+            var frequencyIndexStart = 0;
+            var frequencyIndexEnd = data.stft_sample_frequencies.length - 1;
+            for (var f = 0; f < data.stft_sample_frequencies.length; ++f) {
+                if (data.stft_sample_frequencies[f] > band.frequency.min) {
+                    frequencyIndexStart = f;
+                    break;
+                }
+            }
+            for (var f = data.stft_sample_frequencies.length - 1; f >= 0; --f) {
+                if (data.stft_sample_frequencies[f] <= band.frequency.max) {
+                    frequencyIndexEnd = f;
+                    break;
+                }
+            }
+            bandsFrequencyIndices.push({
+                start: frequencyIndexStart,
+                end: frequencyIndexEnd,
+            });
+        });
+        var stftValuesAbsolute = data.channels[channelIndex].stftValuesAbsolute;
+        var stops = stftValuesAbsolute.map(function(frequencySamples, t) {
+            var frequencyPowersAggregates = bandsFrequencyIndices.map(function(bandFrequencyIndices) {
+                var frequencyPowers = frequencySamples.slice(bandFrequencyIndices.start, bandFrequencyIndices.end + 1)
+                var frequencyPowersSum = frequencyPowers.reduce(function(a, b) { return a + b; }, 0);
+                return frequencyPowersSum / frequencyPowers.length;
+            });
+            var dominantBandIndex = frequencyPowersAggregates.indexOf(Math.max.apply(Math, frequencyPowersAggregates));
+            var dominantBand = bands[dominantBandIndex];
+            var timeStepRelative = t / (stftValuesAbsolute.length - 1);
+            return [ timeStepRelative, dominantBand.color ];
+        });
+        var channelColor = {
+            linearGradient: { x1: 0, y1: 0, x2: 1, y2: 0 },
+            stops: stops,
+        };
+        return channelColor;
+    },
+
+    _getChannelTooltip: function(data, channelIndex) {
+        var that = this;
+        var frequencyBandVisualization = that.options.frequencyBandVisualizationPerChannel[channelIndex];
+        if (!frequencyBandVisualization) {
+            return;
+        }
+        var bands = frequencyBandVisualization.bands;
+        var pointFormat = 'Rhythms:';
+        bands.forEach(function(band) {
+            pointFormat += '<span style="color: ' + band.color + '; font-weight: bold"> ' + band.name + ' (' + band.frequency.min + ' - ' + band.frequency.max + ' Hz)</span>';
+        });
+        var tooltip = {
+            enabled: true,
+            split: true,
+            useHTML: true,
+            headerFormat: '',
+            pointFormat: pointFormat,
+            footerFormat: '',
+        };
+        return tooltip;
     },
 
     _getFeatureColor: function(featureKey, isAnswer, confidence) {
