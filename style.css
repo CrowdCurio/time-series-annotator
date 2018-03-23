@@ -42,8 +42,16 @@ td {
   display: inline;
 }
 
-.artifact_panel, .sleep_stage_panel {
+.artifact_panel, .sleep_stage_panel, .submit_response_for_data_panel {
   display: inline;
+}
+
+.submit_response_for_data_panel {
+  margin-left: 20px;
+}
+
+.phase-indicator {
+  margin: 0;
 }
 
 .navigation_panel, .examples_panel {

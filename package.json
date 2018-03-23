@@ -32,6 +32,7 @@
     "highcharts": "^6.0.3",
     "highcharts-annotations": "^1.3.1",
     "jquery": "^3.2.1",
-    "jquery-ui-browserify": "^1.11.0-pre-seelio"
+    "jquery-ui-browserify": "^1.11.0-pre-seelio",
+    "yt-player": "^2.5.3"
   }
 }
